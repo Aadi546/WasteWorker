@@ -197,7 +197,7 @@ const Header = () => {
       </div>
       {/* Mobile Navigation Menu */}
       {isMenuOpen && (
-        <div className="lg:hidden bg-card border-t border-border">
+        <div className="lg:hidden fixed top-16 left-0 right-0 bg-card border-t border-border z-[60] max-h-[80vh] overflow-auto">
           <div className="px-4 py-3 space-y-2">
             {navigationItems?.map((item) => (
               <button
@@ -245,7 +245,7 @@ const Header = () => {
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-10"
+          className="lg:hidden fixed inset-x-0 top-16 bottom-0 bg-black bg-opacity-50 z-40"
           onClick={() => setIsMenuOpen(false)}
         />
       )}
