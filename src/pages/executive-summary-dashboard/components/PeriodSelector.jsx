@@ -28,8 +28,10 @@ const PeriodSelector = ({ onPeriodChange, onComparisonToggle }) => {
   const currentPeriod = periods?.find(p => p?.value === selectedPeriod);
 
   return (
-    <div className="flex items-center justify-between bg-card border border-border rounded-lg p-4 mb-6">
-      <div className="flex items-center space-x-4">
+    <div className="bg-card border border-border rounded-lg p-4 mb-6">
+      {/* Desktop layout */}
+      <div className="hidden lg:flex items-center justify-between">
+        <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-2">
           <Icon name="Clock" size={20} className="text-muted-foreground" />
           <span className="text-sm font-medium text-foreground">Reporting Period:</span>
@@ -66,8 +68,8 @@ const PeriodSelector = ({ onPeriodChange, onComparisonToggle }) => {
             </div>
           )}
         </div>
-      </div>
-      <div className="flex items-center space-x-6">
+        </div>
+        <div className="flex items-center space-x-6">
         <div className="flex items-center space-x-3">
           <span className="text-sm text-muted-foreground">Department Comparison:</span>
           <button
@@ -95,17 +97,43 @@ const PeriodSelector = ({ onPeriodChange, onComparisonToggle }) => {
           </Button>
         </div>
       </div>
+      </div>
       {/* Mobile Layout */}
-      <div className="lg:hidden flex items-center space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        >
-          <Icon name={currentPeriod?.icon} size={16} className="mr-1" />
-          <span className="text-xs">{selectedPeriod?.charAt(0)?.toUpperCase() + selectedPeriod?.slice(1)}</span>
-        </Button>
-        
+      <div className="flex lg:hidden items-center justify-between mt-2">
+        <div className="flex items-center space-x-2">
+          <Icon name="Clock" size={18} className="text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">Period</span>
+        </div>
+        <div className="relative">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          >
+            <Icon name={currentPeriod?.icon} size={16} className="mr-1" />
+            <span className="text-xs">{selectedPeriod?.charAt(0)?.toUpperCase() + selectedPeriod?.slice(1)}</span>
+          </Button>
+          {isDropdownOpen && (
+            <div className="absolute top-full right-0 mt-2 w-44 bg-popover border border-border rounded-lg shadow-lg py-2 z-20">
+              {periods?.map((period) => (
+                <button
+                  key={period?.value}
+                  onClick={() => handlePeriodSelect(period?.value)}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-muted micro-interaction ${
+                    selectedPeriod === period?.value ? 'bg-muted text-primary' : 'text-foreground'
+                  }`}
+                >
+                  <Icon name={period?.icon} size={14} />
+                  <span className="text-xs">{period?.label}</span>
+                  {selectedPeriod === period?.value && (
+                    <Icon name="Check" size={12} className="ml-auto text-primary" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <Button
           variant={comparisonEnabled ? "default" : "ghost"}
           size="sm"

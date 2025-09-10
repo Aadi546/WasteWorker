@@ -105,7 +105,7 @@ const DailyTasksPage = () => {
     <>
       <Header />
       <div className="min-h-screen bg-background pt-16">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center mb-4">
@@ -120,7 +120,7 @@ const DailyTasksPage = () => {
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <div className="bg-card border border-border rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -164,10 +164,10 @@ const DailyTasksPage = () => {
 
           {/* Task List */}
           <div className="bg-card border border-border rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h2 className="text-lg font-semibold text-foreground">Collection Tasks</h2>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="hidden xs:inline-flex">
                   <Icon name="Filter" size={16} className="mr-2" />
                   Filter
                 </Button>
@@ -178,11 +178,11 @@ const DailyTasksPage = () => {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {tasks.map((task) => (
                 <div
                   key={task.id}
-                  className={`p-4 rounded-lg border ${
+                  className={`p-4 rounded-lg border w-full overflow-hidden ${
                     task.status === 'completed'
                       ? 'bg-success/5 border-success/20'
                       : task.status === 'in-progress'
@@ -190,9 +190,9 @@ const DailyTasksPage = () => {
                         : 'bg-card border-border'
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center flex-wrap gap-2 mb-2">
                         <span className="text-sm font-medium text-foreground">
                           {task.householdId}
                         </span>
@@ -204,10 +204,10 @@ const DailyTasksPage = () => {
                         </span>
                       </div>
 
-                      <p className="text-foreground font-medium mb-1">{task.address}</p>
-                      <p className="text-sm text-muted-foreground mb-2">{task.notes}</p>
+                      <p className="text-foreground font-medium mb-1 break-words">{task.address}</p>
+                      <p className="text-sm text-muted-foreground mb-2 break-words">{task.notes}</p>
 
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                      <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
                         <div className="flex items-center space-x-1">
                           <Icon name="Clock" size={14} />
                           <span>{task.estimatedTime}</span>
@@ -219,7 +219,7 @@ const DailyTasksPage = () => {
                       </div>
                     </div>
 
-                    <div className="flex space-x-2 ml-4">
+                    <div className="flex flex-wrap gap-2 sm:space-x-2 sm:gap-0 sm:ml-4">
                       {task.status === 'pending' && (
                         <Button
                           size="sm"
