@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import Icon from '../components/AppIcon';
 import Button from '../components/ui/Button';
+import RatingStars from '../components/ui/RatingStars';
+import Textarea from '../components/ui/Textarea';
+import { setHouseholdRating, getHouseholdRating } from '../utils/ratings';
 
 const DailyTasksPage = () => {
   const navigate = useNavigate();
@@ -54,12 +57,49 @@ const DailyTasksPage = () => {
     }
   ]);
 
-  const markAsCompleted = (taskId) => {
+  // Seed an example review for a completed task (H003) if not already saved
+  useEffect(() => {
+    try {
+      const existing = getHouseholdRating('H003');
+      if (!existing) {
+        setHouseholdRating('H003', 4, 'Segregation was good, minor mix-ups in paper bin.');
+      }
+    } catch {}
+  }, []);
+
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [modalTaskId, setModalTaskId] = useState(null);
+  const [modalHouseholdId, setModalHouseholdId] = useState('');
+  const [modalRating, setModalRating] = useState(0);
+  const [modalReview, setModalReview] = useState('');
+
+  const openRatingModal = (task) => {
+    setModalTaskId(task.id);
+    setModalHouseholdId(task.householdId);
+    const existing = getHouseholdRating(task.householdId);
+    setModalRating(existing?.rating || 0);
+    setModalReview(existing?.review || '');
+    setRatingModalOpen(true);
+  };
+
+  const closeRatingModal = () => {
+    setRatingModalOpen(false);
+    setModalTaskId(null);
+    setModalHouseholdId('');
+    setModalRating(0);
+    setModalReview('');
+  };
+
+  const confirmCompleteWithRating = () => {
+    if (!modalTaskId) return;
+    if (!modalRating || modalRating < 1) return; // require rating
+    setHouseholdRating(modalHouseholdId, modalRating, modalReview);
     setTasks(tasks.map(task =>
-      task.id === taskId
+      task.id === modalTaskId
         ? { ...task, status: 'completed' }
         : task
     ));
+    closeRatingModal();
   };
 
   const startTask = (taskId) => {
@@ -100,6 +140,15 @@ const DailyTasksPage = () => {
   const pendingTasks = tasks.filter(task => task.status === 'pending');
   const completedTasks = tasks.filter(task => task.status === 'completed');
   const inProgressTasks = tasks.filter(task => task.status === 'in-progress');
+
+  const ratingsMap = useMemo(() => {
+    const map = {};
+    tasks.forEach(t => {
+      const r = getHouseholdRating(t.householdId);
+      if (r) map[t.householdId] = r;
+    });
+    return map;
+  }, [tasks]);
 
   return (
     <>
@@ -234,7 +283,7 @@ const DailyTasksPage = () => {
                         <Button
                           size="sm"
                           variant="default"
-                          onClick={() => markAsCompleted(task.id)}
+                          onClick={() => openRatingModal(task)}
                         >
                           <Icon name="Check" size={14} className="mr-1" />
                           Complete
@@ -246,6 +295,18 @@ const DailyTasksPage = () => {
                       </Button>
                     </div>
                   </div>
+                  {/* Rating display for completed */}
+                  {task.status === 'completed' && ratingsMap[task.householdId]?.rating && (
+                    <div className="mt-3 p-3 rounded-md border border-border bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-foreground">Segregation Rating</span>
+                        <RatingStars value={ratingsMap[task.householdId]?.rating} readOnly />
+                      </div>
+                      {ratingsMap[task.householdId]?.review && (
+                        <p className="mt-2 text-sm text-muted-foreground break-words">{ratingsMap[task.householdId]?.review}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -282,6 +343,44 @@ const DailyTasksPage = () => {
           </div>
         </div>
       </div>
+
+      {ratingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
+          <div className="relative z-10 w-full max-w-md bg-card border border-border rounded-lg p-6 mx-3">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Complete Task</h3>
+                <p className="text-sm text-muted-foreground">Provide a segregation rating for {modalHouseholdId}</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={closeRatingModal}>
+                <Icon name="X" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <span className="block text-sm font-medium text-foreground mb-2">Segregation Rating</span>
+                <RatingStars value={modalRating} onChange={setModalRating} />
+                {!modalRating && (
+                  <p className="mt-1 text-xs text-destructive">Rating is required</p>
+                )}
+              </div>
+              <Textarea
+                label="Optional description"
+                placeholder="Add notes (optional)"
+                value={modalReview}
+                onChange={(e) => setModalReview(e.target.value)}
+              />
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={closeRatingModal}>Cancel</Button>
+              <Button onClick={confirmCompleteWithRating} disabled={!modalRating}>Save & Complete</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

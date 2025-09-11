@@ -3,6 +3,9 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import Header from '../components/ui/Header';
 import Icon from '../components/AppIcon';
 import Button from '../components/ui/Button';
+import RatingStars from '../components/ui/RatingStars';
+import Textarea from '../components/ui/Textarea';
+import { setHouseholdRating } from '../utils/ratings';
 
 const ScannerPage = () => {
   const [scanResult, setScanResult] = useState('');
@@ -11,6 +14,8 @@ const ScannerPage = () => {
   const [complianceStatus, setComplianceStatus] = useState(null);
   const scannerRef = useRef(null);
   const html5QrcodeScannerRef = useRef(null);
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState('');
 
   const startScanning = () => {
     setError('');
@@ -53,6 +58,18 @@ const ScannerPage = () => {
     // Simulate compliance check based on QR code content
     const isCompliant = Math.random() > 0.3; // 70% compliance rate
     setComplianceStatus(isCompliant ? 'compliant' : 'non-compliant');
+  };
+
+  const handleMarkCollected = () => {
+    if (!scanResult) return;
+    if (!rating || rating < 1) {
+      setError('Please provide a segregation rating (1-5 stars).');
+      return;
+    }
+    setError('');
+    setHouseholdRating(scanResult, rating, review);
+    // Provide lightweight success feedback
+    alert('Collection marked with rating saved.');
   };
 
   const resetScan = () => {
@@ -184,11 +201,27 @@ const ScannerPage = () => {
                   </div>
                 )}
 
+                {/* Rating & Review */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-foreground mb-2">Segregation Review</h4>
+                    <RatingStars value={rating} onChange={setRating} />
+                  </div>
+                  <Textarea
+                    label="Optional description"
+                    placeholder="Add any notes (optional)"
+                    value={review}
+                    onChange={(e) => setReview(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
                 {/* Actions */}
                 <div className="space-y-3">
                   <Button 
                     variant={complianceStatus === 'compliant' ? 'default' : 'destructive'} 
                     className="w-full"
+                    onClick={handleMarkCollected}
                   >
                     <Icon name="CheckSquare" size={20} className="mr-2" />
                     Mark as Collected
