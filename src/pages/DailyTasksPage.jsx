@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import RatingStars from '../components/ui/RatingStars';
 import Textarea from '../components/ui/Textarea';
 import { setHouseholdRating, getHouseholdRating } from '../utils/ratings';
+import { loadTasksFromStorage, saveTasksToStorage, loadLastScansFromStorage, saveLastScansToStorage } from '../utils/tasks';
 
 const DailyTasksPage = () => {
   const navigate = useNavigate();
@@ -60,6 +61,26 @@ const DailyTasksPage = () => {
 
   // Map of householdId -> last scan info
   const [lastScans, setLastScans] = useState({});
+
+  // Load persisted tasks and scans once
+  useEffect(() => {
+    const storedTasks = loadTasksFromStorage();
+    if (storedTasks && Array.isArray(storedTasks) && storedTasks.length) {
+      setTasks(storedTasks);
+    }
+    const storedScans = loadLastScansFromStorage();
+    if (storedScans && typeof storedScans === 'object') {
+      setLastScans(storedScans);
+    }
+  }, []);
+
+  // Persist tasks and scans on change
+  useEffect(() => {
+    saveTasksToStorage(tasks);
+  }, [tasks]);
+  useEffect(() => {
+    saveLastScansToStorage(lastScans);
+  }, [lastScans]);
 
   // Seed an example review for a completed task (H003) if not already saved
   useEffect(() => {
