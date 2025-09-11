@@ -1,13 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import Header from '../components/ui/Header';
 import Icon from '../components/AppIcon';
 import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
 import RatingStars from '../components/ui/RatingStars';
 import Textarea from '../components/ui/Textarea';
 import { setHouseholdRating } from '../utils/ratings';
 
 const ScannerPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [scanResult, setScanResult] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState('');
@@ -16,6 +20,8 @@ const ScannerPage = () => {
   const html5QrcodeScannerRef = useRef(null);
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
+  const [manualCode, setManualCode] = useState('');
+  const [showManualWhileScanning, setShowManualWhileScanning] = useState(false);
 
   const startScanning = () => {
     setError('');
@@ -58,6 +64,18 @@ const ScannerPage = () => {
     // Simulate compliance check based on QR code content
     const isCompliant = Math.random() > 0.3; // 70% compliance rate
     setComplianceStatus(isCompliant ? 'compliant' : 'non-compliant');
+
+    // If we came from DailyTasks with an expected household, validate and return
+    const expectedHouseholdId = location.state?.expectedHouseholdId;
+    const taskId = location.state?.taskId;
+    const returnTo = location.state?.returnTo || '/daily-tasks';
+    if (taskId) {
+      if (expectedHouseholdId && decodedText !== expectedHouseholdId) {
+        setError('Scanned code does not match the selected household. Please scan the correct bin.');
+        return;
+      }
+      navigate(returnTo, { state: { scanSuccessForTaskId: taskId, scannedHouseholdId: decodedText, scannedAt: Date.now() } });
+    }
   };
 
   const handleMarkCollected = () => {
@@ -78,22 +96,28 @@ const ScannerPage = () => {
     setError('');
   };
 
-  const handleManualEntry = () => {
-    const manualCode = prompt('Enter household ID manually:');
-    if (manualCode) {
-      setScanResult(manualCode);
-      const isCompliant = Math.random() > 0.3;
-      setComplianceStatus(isCompliant ? 'compliant' : 'non-compliant');
+  const handleManualSubmit = () => {
+    const code = manualCode.trim();
+    if (!code) {
+      setError('Please enter a household ID.');
+      return;
     }
+    setError('');
+    handleScanSuccess(code);
   };
 
   useEffect(() => {
+    // Auto-start scanning if requested by navigation state
+    if (location.state?.autoStart) {
+      // small timeout to ensure DOM is ready
+      setTimeout(() => startScanning(), 50);
+    }
     return () => {
       if (html5QrcodeScannerRef.current) {
         html5QrcodeScannerRef.current.clear();
       }
     };
-  }, []);
+  }, [location.state]);
 
   return (
     <>
@@ -129,10 +153,20 @@ const ScannerPage = () => {
                     <Icon name="Camera" size={20} className="mr-2" />
                     Start Scanning
                   </Button>
-                  <Button variant="outline" onClick={handleManualEntry} className="w-full">
-                    <Icon name="Edit" size={20} className="mr-2" />
-                    Manual Entry
-                  </Button>
+                  <div className="text-left space-y-2">
+                    <div className="text-xs text-muted-foreground">Or enter household ID</div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="e.g. H001"
+                        value={manualCode}
+                        onChange={(e) => setManualCode(e.target.value)}
+                      />
+                      <Button variant="outline" onClick={handleManualSubmit}>
+                        <Icon name="Check" size={16} className="mr-1" />
+                        Submit
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -140,10 +174,32 @@ const ScannerPage = () => {
             {isScanning && (
               <div className="space-y-4">
                 <div id="qr-reader" className="w-full"></div>
-                <Button variant="outline" onClick={stopScanning} className="w-full">
-                  <Icon name="X" size={20} className="mr-2" />
-                  Stop Scanning
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button variant="outline" onClick={stopScanning} className="w-full">
+                    <Icon name="X" size={20} className="mr-2" />
+                    Stop Scanning
+                  </Button>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline self-center"
+                    onClick={() => setShowManualWhileScanning(v => !v)}
+                  >
+                    {showManualWhileScanning ? 'Hide manual entry' : 'Having trouble? Enter household ID manually'}
+                  </button>
+                  {showManualWhileScanning && (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="e.g. H001"
+                        value={manualCode}
+                        onChange={(e) => setManualCode(e.target.value)}
+                      />
+                      <Button variant="outline" onClick={handleManualSubmit}>
+                        <Icon name="Check" size={16} className="mr-1" />
+                        Submit
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

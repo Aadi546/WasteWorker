@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import Icon from '../components/AppIcon';
 import Button from '../components/ui/Button';
@@ -9,6 +9,7 @@ import { setHouseholdRating, getHouseholdRating } from '../utils/ratings';
 
 const DailyTasksPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [tasks, setTasks] = useState([
     {
       id: 1,
@@ -57,6 +58,9 @@ const DailyTasksPage = () => {
     }
   ]);
 
+  // Map of householdId -> last scan info
+  const [lastScans, setLastScans] = useState({});
+
   // Seed an example review for a completed task (H003) if not already saved
   useEffect(() => {
     try {
@@ -102,13 +106,38 @@ const DailyTasksPage = () => {
     closeRatingModal();
   };
 
-  const startTask = (taskId) => {
-    setTasks(tasks.map(task =>
-      task.id === taskId
-        ? { ...task, status: 'in-progress' }
-        : task
-    ));
+  const handleStart = (task) => {
+    navigate('/scanner', {
+      state: {
+        taskId: task.id,
+        expectedHouseholdId: task.householdId,
+        autoStart: true,
+        returnTo: '/daily-tasks'
+      }
+    });
   };
+
+  // When returning from scanner with a successful scan, store scan info and mark that task as in-progress
+  useEffect(() => {
+    const scanSuccessForTaskId = location.state?.scanSuccessForTaskId;
+    const scannedHouseholdId = location.state?.scannedHouseholdId;
+    const scannedAt = location.state?.scannedAt;
+    if (scanSuccessForTaskId && scannedHouseholdId && scannedAt) {
+      // persist scan info
+      setLastScans(prev => ({
+        ...prev,
+        [scannedHouseholdId]: { scannedAt }
+      }));
+      // mark task in-progress
+      setTasks(prev => prev.map(task =>
+        task.id === scanSuccessForTaskId
+          ? { ...task, status: 'in-progress' }
+          : task
+      ));
+      // Clear the navigation state so it doesn't re-trigger on refresh/navigation
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -149,6 +178,18 @@ const DailyTasksPage = () => {
     });
     return map;
   }, [tasks]);
+
+  const minutesAgo = (timestamp) => {
+    const diffMs = Date.now() - timestamp;
+    const mins = Math.floor(diffMs / 60000);
+    return mins;
+  };
+
+  const hasRecentMatchingScan = (householdId) => {
+    const info = lastScans[householdId];
+    if (!info) return false;
+    return Date.now() - info.scannedAt <= 10 * 60 * 1000; // 10 minutes
+  };
 
   return (
     <>
@@ -265,6 +306,12 @@ const DailyTasksPage = () => {
                           <Icon name={getStatusIcon(task.status)} size={14} />
                           <span className="capitalize">{task.status}</span>
                         </div>
+                        {lastScans[task.householdId]?.scannedAt && (
+                          <div className="flex items-center space-x-1">
+                            <Icon name="QrCode" size={14} />
+                            <span>Scanned • {minutesAgo(lastScans[task.householdId].scannedAt)}m ago</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -272,7 +319,7 @@ const DailyTasksPage = () => {
                       {task.status === 'pending' && (
                         <Button
                           size="sm"
-                          onClick={() => startTask(task.id)}
+                          onClick={() => handleStart(task)}
                         >
                           <Icon name="Play" size={14} className="mr-1" />
                           Start
@@ -284,6 +331,7 @@ const DailyTasksPage = () => {
                           size="sm"
                           variant="default"
                           onClick={() => openRatingModal(task)}
+                          disabled={!hasRecentMatchingScan(task.householdId)}
                         >
                           <Icon name="Check" size={14} className="mr-1" />
                           Complete
